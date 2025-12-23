@@ -127,21 +127,29 @@ def split_jobs(ids, batch_size=100):
 
 
 def start_download(gui, ids, callback, ensure_fields=None):
-    d = ConfirmDialog(ids, gui)
-    ret = d.exec()
-    d.b.clicked.disconnect()
-    if ret != QDialog.DialogCode.Accepted:
-        return
+    # --- REMOVED: Confirmation dialog ---
+    # d = ConfirmDialog(ids, gui)
+    # ret = d.exec()
+    # d.b.clicked.disconnect()
+    # if ret != QDialog.DialogCode.Accepted:
+    #      return
+    
+    # --- ADDED: Your default settings ---
+    identify = True   # Download metadata
+    covers = False    # DO NOT download covers (to avoid overloading)
+
     tf = PersistentTemporaryFile('_metadata_bulk.log')
     tf.close()
 
+    # Create job, passing our identify and covers directly
     job = Job('metadata bulk download',
         ngettext(
             'Download metadata for one book',
             'Download metadata for {} books', len(ids)).format(len(ids)),
-        download, (ids, tf.name, gui.current_db, d.identify, d.covers,
+        download, (ids, tf.name, gui.current_db, identify, covers,
             ensure_fields), {}, callback)
-    job.metadata_and_covers = (d.identify, d.covers)
+    
+    job.metadata_and_covers = (identify, covers)
     job.download_debug_log = tf.name
     gui.job_manager.run_threaded_job(job)
     gui.status_bar.show_message(_('Metadata download started'), 3000)
@@ -272,6 +280,8 @@ def download(all_ids, tf, db, do_identify, covers, ensure_fields,
         if abort.is_set():
             aborted = True
         log(f'Download complete, with {len(failed_ids)} failures')
+
+
         return (aborted, ans, tdir, tf, failed_ids, failed_covers, title_map,
                 lm_map, all_failed)
     finally:
